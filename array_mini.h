@@ -15,6 +15,13 @@ void am_add_num_elements(int elementSize, int* numElements, void** elements, int
 void am_add_elements(int elementSize, int* numElements, void** elements, int newNumElements, void* newElements);
 #define am_add_elements2(numElements, elements, newNumElements, newElements) am_add_elements(sizeof **elements, numElements, (void**)elements, newNumElements, (void*)newElements)
 
+// NOTE: assumes..
+//       .. *numElements == 0
+#define am_add_one_element(elementSize, numElements, elements) am_add_num_elements(elementSize, numElements, elements, 1)
+#define am_add_one_element2(numElements, elements) am_add_one_element(sizeof **elements, numElements, (void**)elements)
+#define am_add_element(elementSize, numElements, elements, elementToAdd) am_add_elements(elementSize, numElements, elements, 1, elementToAdd)
+#define am_add_element2(numElements, elements, elementToAdd) am_add_element(sizeof **elements, numElements, (void**)elements, (void*)elementToAdd)
+
 // NOTE: append element(s) where there is/are element(s)
 // NOTE: assumes..
 //       .. *numElements > 0
@@ -28,6 +35,13 @@ void am_append_num_elements(int elementSize, int* numElements, void** elements, 
 void am_append_elements(int elementSize, int* numElements, void** elements, int numElementsToAppend, void* elementsToAppend);
 #define am_append_elements2(numElements, elements, numElementsToAppend, elementsToAppend) am_append_elements(sizeof **elements, numElements, (void**)elements, numElementsToAppend, elementsToAppend)
 
+// NOTE: assumes..
+//       .. *numElements > 0
+#define am_append_one_element(elementSize, numElements, elements) am_append_num_elements(elementSize, numElements, elements, 1)
+#define am_append_one_element2(numElements, elements) am_append_one_element(sizeof **elements, numElements, (void**)elements)
+#define am_append_element(elementSize, numElements, elements, elementToAppend) am_append_elements(elementSize, numElements, elements, 1, elementToAppend)
+#define am_append_element2(numElements, elements, elementToAppend) am_append_element(sizeof **elements, numElements, (void**)elements, (void*)elementToAppend)
+
 // NOTE: see am_add_(num_)elements and am_append_(num_)elements
 // NOTE: assumes..
 //       .. numElementsToAppend > 0
@@ -35,6 +49,11 @@ void am_append_or_add_num_elements(int elementSize, int* numElements, void** ele
 #define am_append_or_add_num_elements2(numElements, elements, numElementsToAppendOrAdd) am_append_or_add_num_elements(sizeof **elements, numElements, (void**)elements, numElementsToAppendOrAdd)
 void am_append_or_add_elements(int elementSize, int* numElements, void** elements, int numElementsToAppendOrAdd, void* elementsToAppendOrAdd);
 #define am_append_or_add_elements2(numElements, elements, numElementsToAppendOrAdd, elementsToAppendOrAdd) am_append_or_add_elements(sizeof **elements, numElements, (void**)elements, numElementsToAppendOrAdd, (void*)elementsToAppendOrAdd)
+
+#define am_append_or_add_one_element(elementSize, numElements, elements) am_append_or_add_num_elements(elementSize, numElements, elements, 1)
+#define am_append_or_add_one_element2(numElements, elements) am_append_or_add_one_element(sizeof **elements, numElements, (void**)elements)
+#define am_append_or_add_element(elementSize, numElements, elements, elementToAppendOrAdd) am_append_or_add_elements(elementSize, numElements, elements, 1, elementToAppendOrAdd)
+#define am_append_or_add_element2(numElements, elements, elementToAppendOrAdd) am_append_or_add_element(sizeof **elements, numElements, (void**)elements, (void*)elementToAppendOrAdd)
 
 // NOTE: assumes..
 //       .. *numElements >= 0

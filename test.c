@@ -439,6 +439,32 @@ int test_10()
 	return 1;
 }
 
+// NOTE: test whether am_*_(one_)element (i.e. macros) compile
+int test_11()
+{
+	int numNumbers;
+	int* numbers;
+
+	int a = 1;
+	am_add_element2(&numNumbers, &numbers, &a);
+	int b = 2;
+	am_append_element2(&numNumbers, &numbers, &b);
+	int c = 3;
+	am_append_or_add_element2(&numNumbers, &numbers, &c);
+	
+	am_remove_elements2(&numNumbers, &numbers);
+	
+	am_add_one_element2(&numNumbers, &numbers);
+	am_append_one_element2(&numNumbers, &numbers);
+	am_append_or_add_one_element2(&numNumbers, &numbers);
+
+	am_remove_first_element2(&numNumbers, &numbers);
+	am_remove_element_at2(&numNumbers, &numbers, 1);
+	am_remove_last_element2(&numNumbers, &numbers);
+	
+	return 1;
+}
+
 //*****************************************************************************
 
 int main(int argc, char** argv)
@@ -453,6 +479,7 @@ int main(int argc, char** argv)
 	TM_TEST2(8)
 	TM_TEST2(9)
 	TM_TEST2(10)
+	TM_TEST2(11)
 	
 	return 0;
 }
