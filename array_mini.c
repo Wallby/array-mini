@@ -42,8 +42,8 @@ void am_append_elements(int elementSize, int* numElements, void** elements, int 
 void am_append_or_add_num_elements(int elementSize, int* numElements, void** elements, int numElementsToAppendOrAdd)
 {
 	void* a = *elements;
-	//*elements = (void*)new char[elementSize * ((*numElements) + 1)];
-	*elements = malloc(elementSize * ((*numElements) + 1));	
+	//*elements = (void*)new char[elementSize * ((*numElements) + numElementsToAppendOrAdd)];
+	*elements = malloc(elementSize * ((*numElements) + numElementsToAppendOrAdd));	
 	if(*numElements > 0)
 	{
 		memcpy(*elements, a, elementSize * (*numElements));
