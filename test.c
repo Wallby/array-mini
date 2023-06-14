@@ -6,13 +6,157 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define min(a, b) a < b ? a : b
+
 
 //#define CALL(a) a; fputs(#a "\n", stdout)
+
+// NOTE: tests am_search_in
+//       ^
+//       am_is_in not tested as is implemented using am_search_in
+int numTimesTest1Ran = 0;
+int test_1()
+{
+	int numNumbers = 19;
+	int numbers[numNumbers];// = { 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37 };
+	for(int i = 0; i < numNumbers; ++i)
+	{
+		numbers[i] = 1 + 2 * i;
+	}
+	
+	int a = 1 + 4 * numTimesTest1Ran; //< 1 -> 5 -> 9 -> 13 -> 17 -> 21 -> 25 -> 29 -> 33 -> 37
+	int expectedIndex = 2 * numTimesTest1Ran;
+	
+	int index;
+	if(am_search_in2(NULL, numNumbers, numbers, &a, &index) == 0)
+	{
+		fprintf(stderr, "error: am_search_in2(NULL, &numNumbers, numbers, %i, &index) == 0\n", a);
+		
+		return 0;
+	}
+	
+	if(index != expectedIndex)
+	{
+		fprintf(stderr, "error: index != %i (index == %i)\n", expectedIndex, index);
+		
+		return 0;
+	}
+	
+	++numTimesTest1Ran;
+	
+	return 1;
+}
+
+// NOTE: tests..
+//       .. am_get_differences
+//       .. am_get_similarities
+int test_2()
+{
+	int numNumbers1 = 5;
+	int numbers1[numNumbers1];// = { 1, 2, 3, 4, 5 };
+	numbers1[0] = 1;
+	numbers1[1] = 2;
+	numbers1[2] = 3;
+	numbers1[3] = 4;
+	numbers1[4] = 5;
+	int numNumbers2 = 4;
+	int numbers2[numNumbers2];// = { 1, 4, 2, 6 };
+	numbers2[0] = 1;
+	numbers2[1] = 4;
+	numbers2[2] = 2;
+	numbers2[3] = 6;
+	
+	int numDifferences1;
+	int indexPerDifference1[numNumbers1];
+	int numDifferences2;
+	int indexPerDifference2[numNumbers2];
+	am_get_differences2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numDifferences1, indexPerDifference1, &numDifferences2, indexPerDifference2);
+	// ^
+	// numDifferences1 == 2
+	// indexPerDifference1 == { 2, 4 }; //< numbers 3, 5
+	// numDifferences2 == 1
+	// indexPerDifference2 == { 3 }; //< number 6
+	
+	int numExpectedDifferences1 = 2;
+	int expectedIndexPerDifference1[] = { 2, 4 };
+	int numExpectedDifferences2 = 1;
+	int expectedIndexPerDifference2[] = { 3 };
+	if(numDifferences1 != numExpectedDifferences1)
+	{
+		fprintf(stderr, "error: numDifferences1 != %i (numDifferences1 == %i)\n", numExpectedDifferences1, numDifferences1);
+		
+		return 0;
+	}
+	for(int i = 0; i < numDifferences1; ++i)
+	{
+		if(indexPerDifference1[i] != expectedIndexPerDifference1[i])
+		{
+			fprintf(stderr, "error: indexPerDifference1[%i] != %i (indexPerDifference1[%i] == %i)\n", i, expectedIndexPerDifference1[i], i, indexPerDifference1[i]);
+			
+			return 0;
+		}
+	}
+	if(numDifferences2 != numExpectedDifferences2)
+	{
+		fprintf(stderr, "error: numDifferences2 != %i (numDifferences2 == %i)\n", numExpectedDifferences2, numDifferences2);
+
+		return 1;
+	}
+	for(int i = 0; i < numDifferences2; ++i)
+	{
+		if(indexPerDifference2[i] != expectedIndexPerDifference2[i])
+		{
+			fprintf(stderr, "error: indexPerDifference2[%i] != %i (indexPerDifference2[%i] == %i)\n", i, expectedIndexPerDifference2[i], i, indexPerDifference2[i]);
+			
+			return 0;
+		}
+	}
+	
+	int numMaxSimilarities = min(numNumbers1, numNumbers2);
+	int numSimilarities;
+	struct am_similarity_t similarities1[numMaxSimilarities];
+	struct am_similarity_t similarities2[numMaxSimilarities];
+	
+	am_get_similarities2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numSimilarities, similarities1, similarities2);
+	// ^
+	// numSimilarities = 3
+	// similarities1 == { { 0, 0 }, { 1, 2 }, { 3, 1 } }; //< numbers 1, 2, 4
+	// similarities2 == { { 0, 0 }, { 3, 1 }, { 1, 2 } }; //< numbers 1, 4, 2
+	
+	int numExpectedSimilarities = 3;
+	struct am_similarity_t expectedSimilarities1[] = { { 0, 0 }, { 1, 2 }, { 3, 1 } };
+	struct am_similarity_t expectedSimilarities2[] = { { 0, 0 }, { 3, 1 }, { 1, 2 } };
+	if(numSimilarities != numExpectedSimilarities)
+	{
+		fprintf(stderr, "error: numSimilarities != %i (numSimilarities == %i)\n", numExpectedSimilarities, numSimilarities);
+		
+		return 0;
+	}
+	for(int i = 0; i < numSimilarities; ++i)
+	{
+		//if(~((similarities1[i].index1 == expectedSimilarities1[i].index1) & (similarities1[i].index2 == expectedSimilarities1[i].index2)))
+		if(!((similarities1[i].index1 == expectedSimilarities1[i].index1) & (similarities1[i].index2 == expectedSimilarities1[i].index2)))
+		{
+			fprintf(stderr, "error: similarities1[%i] != { %i, %i } (similarities1[%i] == { %i, %i })\n", i, expectedSimilarities1[i].index1, expectedSimilarities1[i].index2, i, similarities1[i].index1, similarities1[i].index2);
+		
+			return 0;
+		}
+		//if(~((similarities2[i].index1 == expectedSimilarities2[i].index1) & (similarities2[i].index2 == expectedSimilarities2[i].index2)))
+		if(!((similarities2[i].index1 == expectedSimilarities2[i].index1) & (similarities2[i].index2 == expectedSimilarities2[i].index2)))
+		{
+			fprintf(stderr, "error: similarities2[%i] != { %i, %i } (similarities2[%i] == { %i, %i })\n", i, expectedSimilarities2[i].index1, expectedSimilarities2[i].index2, i, similarities1[i].index1, similarities1[i].index2);
+		
+			return 0;
+		}
+	}
+	
+	return 1;
+}
 
 // NOTE: tests..
 //       .. am_add_num_elements
 //       .. am_remove_elements
-int test_1()
+int test_3()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -40,7 +184,7 @@ int test_1()
 	return 1;
 }
 // NOTE: tests am_add_elements
-int test_2()
+int test_4()
 {
 	int numNumbers;
 	int* numbers;
@@ -71,7 +215,7 @@ int test_2()
 }
 
 // NOTE: tests am_append_num_elements
-int test_3()
+int test_5()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[numNumbers];
@@ -105,7 +249,7 @@ int test_3()
 	return 1;
 }
 // NOTE: tests am_append_elements
-int test_4()
+int test_6()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[5];
@@ -146,7 +290,7 @@ int test_4()
 }
 
 // NOTE: tests am_append_or_add_num_elements
-int test_5()
+int test_7()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -187,7 +331,7 @@ int test_5()
 	return 1;
 }
 // NOTE: tests am_append_or_add_elements
-int test_6()
+int test_8()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -244,7 +388,7 @@ int test_6()
 }
 
 // NOTE: tests am_replace_elements
-int test_7()
+int test_9()
 {
 	int numNumbers = 12;
 	int* numbers = malloc(sizeof(int) * numNumbers);
@@ -282,7 +426,7 @@ int test_7()
 }
 
 // NOTE: tests am_add_or_replace_elements
-int test_8()
+int test_10()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -339,7 +483,7 @@ int test_8()
 // NOTE: tests..
 //       .. am_remove_first_num_elements
 //       .. am_remove_last_num_elements
-int test_9()
+int test_11()
 {
 	int numNumbers = 12;
 	//int* numbers = new int[numNumbers];
@@ -394,7 +538,7 @@ int test_9()
 }
 
 // NOTE: tests am_remove_num_elements_at
-int test_10()
+int test_12()
 {
 	int numNumbers = 12;
 	//int* numbers = new int[numNumbers];
@@ -440,7 +584,7 @@ int test_10()
 }
 
 // NOTE: test whether am_*_(one_)element (i.e. macros) compile
-int test_11()
+int test_13()
 {
 	int numNumbers;
 	int* numbers;
@@ -465,11 +609,112 @@ int test_11()
 	return 1;
 }
 
+// NOTE: tests am_append_differences
+int test_14()
+{
+	int numNumbers = 5;
+	//int* numbers = new int[numNumbers];
+	int* numbers = (int*)malloc(sizeof(int) * numNumbers);
+	for(int i = 0; i < numNumbers; ++i)
+	{
+		numbers[i] = (i + 1) * (i + 1);
+	}
+	// ^
+	// 1, 4, 9, 16, 25
+	
+	int numNumbersToAppend = 4;
+	int numbersToAppend[numNumbersToAppend];// = { 3, 9, 5, 25 };
+	numbersToAppend[0] = 3;
+	numbersToAppend[1] = 9;
+	numbersToAppend[2] = 5;
+	numbersToAppend[3] = 25;
+	
+	am_append_differences2(NULL, &numNumbers, &numbers, numNumbersToAppend, numbersToAppend);
+	
+	int numExpectedNumbers = 7;
+	int expectedNumbers[numExpectedNumbers];// = { 1, 4, 9, 16, 25, 3, 5};
+	expectedNumbers[0] = 1;
+	expectedNumbers[1] = 4;
+	expectedNumbers[2] = 9;
+	expectedNumbers[3] = 16;
+	expectedNumbers[4] = 25;
+	expectedNumbers[5] = 3;
+	expectedNumbers[6] = 5;
+	if(numNumbers != numExpectedNumbers)
+	{
+		fprintf(stderr, "error: numNumbers != %i (numNumbers == %i)\n", numExpectedNumbers, numNumbers);
+		
+		return 0;
+	}
+	for(int i = 0; i < numNumbers; ++i)
+	{
+		if(numbers[i] != expectedNumbers[i])
+		{
+			fprintf(stderr, "error: numbers[%i] != %i (numbers[%i] == %i)\n", i, expectedNumbers[i], i, numbers[i]);
+			
+			return 0;
+		}
+	}
+	
+	am_remove_elements2(&numNumbers, &numbers);
+	
+	return 1;
+}
+
+// NOTE: tests am_remove_similarities
+int test_15()
+{
+	int numNumbers = 5;
+	//int* numbers = new int[numNumbers];
+	int* numbers = (int*)malloc(sizeof(int) * numNumbers);
+	for(int i = 0; i < numNumbers; ++i)
+	{
+		numbers[i] = (i + 1) * (i + 1);
+	}
+	// ^
+	// 1, 4, 9, 16, 25
+	
+	int numNumbersToRemove = 5;
+	int numbersToRemove[numNumbersToRemove];// = { 1, 2, 16, 4, 3 };
+	numbersToRemove[0] = 1;
+	numbersToRemove[1] = 2;
+	numbersToRemove[2] = 16;
+	numbersToRemove[3] = 4;
+	numbersToRemove[4] = 3;
+	
+	am_remove_similarities2(NULL, &numNumbers, &numbers, numNumbersToRemove, numbersToRemove);
+	
+	int numExpectedNumbers = 2;
+	int expectedNumbers[numExpectedNumbers];// = { 9, 25 };
+	expectedNumbers[0] = 9;
+	expectedNumbers[1] = 25;
+	
+	if(numNumbers != numExpectedNumbers)
+	{
+		fprintf(stderr, "error: numNumbers != %i (numNumbers == %i)\n", numNumbers);
+		
+		return 0;
+	}
+	for(int i = 0; i < numNumbers; ++i)
+	{
+		if(numbers[i] != expectedNumbers[i])
+		{
+			fprintf(stderr, "error: numbers[%i] != %i (numbers[%i] == %i)\n", i, expectedNumbers[i], i, numbers[i]);
+			
+			return 0;
+		}
+	}
+	
+	am_remove_elements2(&numNumbers, &numbers);
+	
+	return 1;
+}
+
 //*****************************************************************************
 
 int main(int argc, char** argv)
 {
-	TM_TEST2(1)
+	TM_TEST(1, 9) //< can only run max 10 times as test uses variable numTimesTest1Ran
 	TM_TEST2(2)
 	TM_TEST2(3)
 	TM_TEST2(4)
@@ -480,6 +725,10 @@ int main(int argc, char** argv)
 	TM_TEST2(9)
 	TM_TEST2(10)
 	TM_TEST2(11)
+	TM_TEST2(12)
+	TM_TEST2(13)
+	TM_TEST2(14)
+	TM_TEST2(15)
 	
 	return 0;
 }
