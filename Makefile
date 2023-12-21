@@ -12,8 +12,8 @@ libarray-mini$(LIBRARY_EXTENSION): array_mini.o
 	$(call RM,libarray-mini$(LIBRARY_EXTENSION))
 	ar rcs libarray-mini$(LIBRARY_EXTENSION) array_mini.o
 
-array_mini.o: array_mini.c ../check-mini/check_mini.h
-	gcc -c array_mini.c -I../check-mini/
+array_mini.o: array_mini.c
+	gcc -c array_mini.c
 
 test$(EXECUTABLE_EXTENSION): test.o libarray-mini$(LIBRARY_EXTENSION) ../test-mini/libtest-mini$(LIBRARY_EXTENSION)
 	gcc -Wl,--wrap=malloc,--wrap=free,--wrap=main -o test$(EXECUTABLE_EXTENSION) test.o -L./ -larray-mini -L../test-mini/ -ltest-mini
