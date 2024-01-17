@@ -2,29 +2,50 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define min(a, b) a < b ? a : b
 
 
+//********************************* predicates ********************************
+
+int am_predicate_not_memcmp(void* a, void* b)
+{
+	fputs("error: am_predicate_not_memcmp should not be called (see comment in array_mini.c)\n", stderr);
+
+	// don't actually call this function as elementSize is unknown here,..
+	// .. instead test if predicate == am_predicate_not_memcmp
+	
+	return 0;
+}
+
+static int predicate2(int elementSize, int(*predicate)(void*, void*), void* element, void* query)
+{
+	if(predicate == NULL)
+	{
+		return memcmp(element, query, elementSize) == 0 ? 1 : 0;
+	}
+	else if(predicate == am_predicate_not_memcmp)
+	{
+		return memcmp(element, query, elementSize) != 0 ? 1 : 0;
+	}
+	else
+	{
+		return predicate(element, query);
+	}
+}
+
 //********************************* analyzing *********************************
 
 //template<type A>
-//void am_search_in(int(*predicate)(A*, A*), int numElements, A* elements, A* query, int* index)
-int am_search_in(int elementSize, int(*predicate)(void*, void*), int numElements, void* elements, void* query, int* index)
+//void am_search_first_in(int(*predicate)(A*, A*), int numElements, A* elements, A* query, int* index)
+int am_search_first_in(int elementSize, int(*predicate)(void*, void*), int numElements, void* elements, void* query, int* index)
 {
 	for(int i = 0; i < numElements; ++i)
 	{
 		void* element = elements + elementSize * i;
 	
-		int bAreNotDifferent;
-		if(predicate == NULL)
-		{
-			bAreNotDifferent = memcmp(element, query, elementSize) == 0 ? 1 : 0;
-		}
-		else
-		{
-			bAreNotDifferent = predicate(element, query);
-		}
+		int bAreNotDifferent = predicate2(elementSize, predicate, element, query);
 		if(bAreNotDifferent == 1)
 		{
 			*index = i;
@@ -35,13 +56,147 @@ int am_search_in(int elementSize, int(*predicate)(void*, void*), int numElements
 	return 0;
 }
 
+int am_search_in(int elementSize, int(*predicate)(void*, void*), int numElements, void* elements, void* query, int* numIndices, int** indices)
+{
+	int numIndicesThusfar = 0;
+	for(int i = 0; i < numElements; ++i)
+	{
+		void* element = elements + elementSize * i;
+	
+		int bAreNotDifferent = predicate2(elementSize, predicate, element, query);
+		if(bAreNotDifferent == 1)
+		{
+			(*indices)[numIndicesThusfar] = i;
+			++numIndicesThusfar;
+		}
+	}
+	
+	*numIndices = numIndicesThusfar;
+	
+	return *numIndices == 0 ? 0 : 1;
+}
+
 int am_is_in(int elementSize, int(*predicate)(void*, void*), int numElements, void* elements, void* query)
 {
 	int a;
-	return am_search_in(elementSize, predicate, numElements, elements, query, &a);
+	return am_search_first_in(elementSize, predicate, numElements, elements, query, &a);
 }
 
-void am_get_differences(int elementSize, int(*predicate)(void*, void*), int numElements1, void* elements1, int numElements2, void* elements2, int* numDifferences1, int* indexPerDifference1, int* numDifferences2, int* indexPerDifference2)
+void am_get_uniques(int elementSize, int(*predicate)(void*, void*), int numElements, void* elements, int* numUniques, int** indexPerUnique)
+{
+	int numSimilarities;
+	struct am_similarity_t similarities[numElements - 1];
+	//am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &similarities, NULL, NULL);
+	am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, (struct am_similarity_t**)&similarities, NULL, NULL);
+	
+	if(numSimilarities == numElements)
+	{
+		return;
+	}
+	
+	int numUniquesThusfar = 0;
+	for(int i = 0; i < numElements; ++i)
+	{
+		//if(am_is_in2([](struct am_similarity_t* a, int* query){ return a->index1 == query ? 1 : 0; }, numSimilarities, similarities, i) == 1)
+		//{
+		//	continue;
+		//}
+		int bIsDuplicate = 0;
+		for(int j = 0; j < numSimilarities; ++j)
+		{
+			if(similarities[j].index1 == i)
+			{
+				bIsDuplicate = 1;
+				break;
+			}
+		}
+		if(bIsDuplicate == 1)
+		{
+			continue;
+		}
+		
+		(*indexPerUnique)[numUniquesThusfar] = i;
+		++numUniquesThusfar;
+	}
+	*numUniques = numUniquesThusfar;
+}
+
+void am_get_duplicates(int elementSize, int(*predicate)(void*, void*), int numElements, void* elements, int* numDuplicates, struct am_duplicate_t** duplicates)
+{
+	int numSimilarities;
+	struct am_similarity_t similarities[numElements - 1];
+	//am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &similarities, NULL, NULL);
+	am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, (struct am_similarity_t**)&similarities, NULL, NULL);
+	
+	if(numSimilarities == 0)
+	{
+		return;
+	}
+	
+	int numDuplicatesThusfar = 0;
+	
+	int numIndicesThusfar = 0;
+	int indicesThusfar[numSimilarities];
+	// ^
+	// numIndices for which there is now an element in duplicates
+	
+	for(int i = 0; i < numElements; ++i)
+	{
+		//if(am_is_in2(NULL, numIndicesThusfar, indicesThusfar, i) == 1)
+		int bIsIndex = 0;
+		for(int j = 0; j < numIndicesThusfar; ++j)
+		{
+			if(indicesThusfar[j] == i)
+			{
+				bIsIndex = 1;
+				break;
+			}
+		}
+		if(bIsIndex == 1)
+		{
+			continue;
+		}
+		
+		int numIndices;
+		int indices[numSimilarities]; //< # max indices == # similarities
+		
+		// actually stores indices each to similarity, index to duplicate is..
+		// .. similarities[indices[..]].index2
+		// v
+		//if(am_search_in2([](struct am_similarity_t* a, int* query){ return a->index1 == query ? 1 : 0; }, numSimilarities, similarities, i, &numIndices, &indices) == 0)
+		// doesn't store indices each to similarity unlike above
+		// v
+		for(int j = 0; j < numSimilarities; ++j)
+		{
+			if(similarities[j].index1 == i)
+			{
+				indices[numIndices] = similarities[j].index2;
+				++numIndices;
+			}
+		}
+		if(numIndices == 0)
+		{
+			continue;
+		}
+		
+		(*duplicates)[numDuplicatesThusfar].index = indices[0];
+		++numDuplicatesThusfar;
+		indicesThusfar[0] = indices[0];
+		++numIndicesThusfar;
+		for(int j = 1; j < numIndices; ++j)
+		{
+			(*duplicates)[numDuplicatesThusfar - 1].nextDuplicate = &(*duplicates)[numDuplicatesThusfar];
+			(*duplicates)[numDuplicatesThusfar].index = indices[j];
+			++numDuplicatesThusfar;
+			indicesThusfar[numIndicesThusfar] = indices[j];
+			++numIndicesThusfar;
+		}
+		(*duplicates)[numDuplicatesThusfar - 1].nextDuplicate = NULL;
+	}
+	*numDuplicates = numDuplicatesThusfar;
+}
+
+void am_get_differences(int elementSize, int(*predicate)(void*, void*), int numElements1, void* elements1, int numElements2, void* elements2, int* numDifferences1, int** indexPerDifference1, int* numDifferences2, int** indexPerDifference2)
 {
 	if(numDifferences1 != NULL)
 	{
@@ -56,7 +211,7 @@ void am_get_differences(int elementSize, int(*predicate)(void*, void*), int numE
 			{
 				if(indexPerDifference1 != NULL)
 				{
-					indexPerDifference1[*numDifferences1] = i;
+					(*indexPerDifference1)[*numDifferences1] = i;
 				}
 				++(*numDifferences1);
 			}
@@ -75,7 +230,7 @@ void am_get_differences(int elementSize, int(*predicate)(void*, void*), int numE
 			{
 				if(indexPerDifference2 != NULL)
 				{
-					indexPerDifference2[*numDifferences2] = i;
+					(*indexPerDifference2)[*numDifferences2] = i;
 				}
 				++(*numDifferences2);
 			}
@@ -83,39 +238,39 @@ void am_get_differences(int elementSize, int(*predicate)(void*, void*), int numE
 	}
 }
 
-void am_get_similarities(int elementSize, int(*predicate)(void*, void*), int numElements1, void* elements1, int numElements2, void* elements2, int* numSimilarities, struct am_similarity_t* similarities1, struct am_similarity_t* similarities2)
+void am_get_similarities(int elementSize, int(*predicate)(void*, void*), int numElements1, void* elements1, int numElements2, void* elements2, int* numSimilarities1, struct am_similarity_t** similarities1, int* numSimilarities2, struct am_similarity_t** similarities2)
 {
-	if(similarities1 != NULL)
+	if(numSimilarities1 != NULL)
 	{
-		*numSimilarities = 0;
+		*numSimilarities1 = 0;
 		
 		for(int i = 0; i < numElements1; ++i)
 		{
 			void* element1 = elements1 + elementSize * i;
 		
 			int index;
-			if(am_search_in(elementSize, predicate, numElements2, elements2, element1, &index) == 1)
+			if(am_search_first_in(elementSize, predicate, numElements2, elements2, element1, &index) == 1)
 			{
-				similarities1[*numSimilarities].index1 = i; //< i here is index into elements1
-				similarities1[*numSimilarities].index2 = index;
-				++(*numSimilarities);
+				(*similarities1)[*numSimilarities1].index1 = i; //< i here is index into elements1
+				(*similarities1)[*numSimilarities1].index2 = index;
+				++(*numSimilarities1);
 			}
 		}
 	}
-	if(similarities2 != NULL)
+	if(numSimilarities2 != NULL)
 	{
-		*numSimilarities = 0; //< if similarities1 != NULL.. calculates *numSimilarities twice
+		*numSimilarities2 = 0;
 		
 		for(int i = 0; i < numElements2; ++i)
 		{
 			void* element2 = elements2 + elementSize * i;
 		
 			int index;
-			if(am_search_in(elementSize, predicate, numElements1, elements1, element2, &index) == 1)
+			if(am_search_first_in(elementSize, predicate, numElements1, elements1, element2, &index) == 1)
 			{
-				similarities2[*numSimilarities].index1 = index;
-				similarities2[*numSimilarities].index2 = i; //< i here is index into elements2
-				++(*numSimilarities);
+				(*similarities2)[*numSimilarities2].index1 = index;
+				(*similarities2)[*numSimilarities2].index2 = i; //< i here is index into elements2
+				++(*numSimilarities2);
 			}
 		}
 	}
@@ -156,7 +311,7 @@ void am_append_elements(int elementSize, int* numElements, void** elements, int 
 	*numElements += numElementsToAppend;
 }
 
-void am_append_or_add_num_elements(int elementSize, int* numElements, void** elements, int numElementsToAppendOrAdd)
+void am_add_or_append_num_elements(int elementSize, int* numElements, void** elements, int numElementsToAppendOrAdd)
 {
 	void* a = *elements;
 	//*elements = (void*)new char[elementSize * ((*numElements) + numElementsToAppendOrAdd)];
@@ -169,7 +324,7 @@ void am_append_or_add_num_elements(int elementSize, int* numElements, void** ele
 	}
 	*numElements += numElementsToAppendOrAdd;
 }
-void am_append_or_add_elements(int elementSize, int* numElements, void** elements, int numElementsToAppendOrAdd, void* elementsToAppendOrAdd)
+void am_add_or_append_elements(int elementSize, int* numElements, void** elements, int numElementsToAppendOrAdd, void* elementsToAppendOrAdd)
 {
 	void* a = *elements;
 	//*elements = (void*)new char[elementSize * ((*numElements) + numElementsToAppendOrAdd)];
@@ -272,13 +427,26 @@ void am_remove_last_num_elements(int elementSize, int* numElements, void** eleme
 	*numElements -= lastNumElementsToRemove;
 }
 
+//************************ both analyzing and editing *************************
+
 void am_append_differences(int elementSize, int(*predicate)(void*, void*), int* numElements, void** elements, int numElementsToAppend, void* elementsToAppend)
 {
 	int maxNumDifferences = min(*numElements, numElementsToAppend);
 	
 	int numDifferences;
 	int indexPerDifference[maxNumDifferences];
-	am_get_differences(elementSize, predicate, *numElements, *elements, numElementsToAppend, elementsToAppend, NULL, NULL, &numDifferences, indexPerDifference);
+	//am_get_differences(elementSize, predicate, *numElements, *elements, numElementsToAppend, elementsToAppend, NULL, NULL, &numDifferences, &indexPerDifference);
+	// NOTE: for some reason not clear to me above is not allowed but below is
+	//       ^
+	//       see..
+	//       .. https://www.codeproject.com/Questions/5375895/Why-is-address-of-array-not-convertible-to-in-C
+	int* a = indexPerDifference;
+	am_get_differences(elementSize, predicate, *numElements, *elements, numElementsToAppend, elementsToAppend, NULL, NULL, &numDifferences, &a);
+	
+	if(numDifferences == 0)
+	{
+		return;
+	}
 	
 	int oldNumElements = *numElements;
 	
@@ -297,11 +465,23 @@ void am_append_differences(int elementSize, int(*predicate)(void*, void*), int* 
 
 void am_remove_similarities(int elementSize, int(*predicate)(void*, void*), int* numElements, void** elements, int numElementsToRemove, void* elementsToRemove)
 {
-	int maxNumSimilarities = min(*numElements, numElementsToRemove);
+	int maxNumSimilarities = min(*numElements, numElementsToRemove) - 1;
 	
 	int numSimilarities;
 	struct am_similarity_t similarities[maxNumSimilarities];
-	am_get_similarities(elementSize, predicate, *numElements, *elements, numElementsToRemove, elementsToRemove, &numSimilarities, similarities, NULL);
+	//am_get_similarities(elementSize, predicate, *numElements, *elements, numElementsToRemove, elementsToRemove, &numSimilarities, &similarities, NULL, NULL);
+	// NOTE: see comment in am_append_differences about am_get_differences..
+	//       .. above (same applies here to am_get_similarities)
+	struct am_similarity_t* a = similarities;
+	am_get_similarities(elementSize, predicate, *numElements, *elements, numElementsToRemove, elementsToRemove, &numSimilarities, &a, NULL, NULL);
+	// ^
+	// use similarities1 here not similarities2 as duplicates in elements is..
+	// .. allowed, duplicates in elementsToRemove if any would be ignored
+	
+	if(numSimilarities == 0)
+	{
+		return;
+	}
 	
 	// remove different elements shift element(s) if any after to the front
 	// v
@@ -351,15 +531,152 @@ void am_remove_similarities(int elementSize, int(*predicate)(void*, void*), int*
 		i = indexToNextDifferentElement + 1; //< + 1 again as no reason to check a different element again
 	}
 	
-	void* a = *elements;
+	void* b = *elements;
 	if(newNumElements > 0)
 	{
 		//*elements = (void*)new char[elementSize * newNumElements];
 		*elements = malloc(elementSize * newNumElements);
-		memcpy(*elements, a, elementSize * newNumElements);
+		memcpy(*elements, b, elementSize * newNumElements);
 	}
-	//delete a;
-	free(a);
+	//delete b;
+	free(b);
 	
 	*numElements = newNumElements;
+}
+
+void am_remove(int elementSize, int(*predicate)(void*, void*), int* numElements, void** elements, void* query, int* numElementsRemoved)
+{
+	*numElementsRemoved = 0;
+	for(int i = 0; i < *numElements - *numElementsRemoved;)
+	{
+		void* element1 = *elements + elementSize * i;
+		
+		int bRemove1 = predicate2(elementSize, predicate, element1, query);
+		if(bRemove1 == 1)
+		{
+			int indexToNextElementToNotRemove = -1;
+			for(int j = i + 1; j < *numElements - *numElementsRemoved; ++j)
+			{
+				void* element2 = *elements + elementSize * j;
+			
+				int bRemove2 = predicate2(elementSize, predicate, element2, query);
+				if(bRemove2 == 0)
+				{
+					indexToNextElementToNotRemove = j;
+					break;
+				}
+			}
+			if(indexToNextElementToNotRemove != -1)
+			{
+				int numElementsToRemove = indexToNextElementToNotRemove - i;
+				
+				int lastNumElementsToMoveToFront = *numElements - indexToNextElementToNotRemove;
+				
+				// move back elements to front
+				memcpy(*elements + elementSize * i, *elements + elementSize * indexToNextElementToNotRemove, elementSize * lastNumElementsToMoveToFront);
+				
+				*numElementsRemoved += numElementsToRemove;
+			}
+			else
+			{
+				int numElementsToRemove = (*numElements - *numElementsRemoved) - i;
+			
+				*numElementsRemoved += numElementsToRemove;
+			}
+		}
+		else
+		{
+			++i;
+		}
+	}
+	if(*numElementsRemoved > 0)
+	{
+		int newNumElements = *numElements - *numElementsRemoved;
+	
+		void* a = *elements;
+		if(newNumElements > 0)
+		{
+			//*elements = new char[elementSize * newNumElements];
+			*elements = malloc(elementSize * newNumElements);
+			memcpy(*elements, a, elementSize * newNumElements);
+		}
+		//delete a;
+		free(a);
+		
+		*numElements = newNumElements;
+	}
+}
+
+void am_move_to_front(int elementSize, int(*predicate)(void*, void*), int numElements, void** elements, void* query, int* numElementsMovedToFront)
+{
+	//...
+}
+
+void am_move_to_back(int elementSize, int(*predicate)(void*, void*), int numElements, void** elements, void* query, int* numElementsMovedToBack)
+{
+	*numElementsMovedToBack = 0;
+	for(int i = 0; i < numElements - *numElementsMovedToBack;)
+	{
+		void* element1 = *elements + elementSize * i;
+	
+		int bMoveToBack1 = predicate2(elementSize, predicate, element1, query);
+		if(bMoveToBack1 == 1)
+		{
+			int indexToNextElementToNotMoveToBack = -1;
+			for(int j = i + 1; j < numElements - *numElementsMovedToBack; ++j)
+			{
+				void* element2 = *elements + elementSize * j;
+			
+				int bMoveToBack2 = predicate2(elementSize, predicate, element2, query);
+				if(bMoveToBack2 == 0)
+				{
+					indexToNextElementToNotMoveToBack = j;
+					break;
+				}
+			}
+			if(indexToNextElementToNotMoveToBack != -1)
+			{
+				int numElementsToMoveToBack = indexToNextElementToNotMoveToBack - i;
+				
+				char elementsToMoveToBack[elementSize * numElementsToMoveToBack]; //< 0 length array is not officially allowed in C, but guaranteed that numElementsToMoveToBack is >= 1 here
+				/// backup front elements
+				memcpy(elementsToMoveToBack, *elements + elementSize * i, elementSize * numElementsToMoveToBack);
+				
+				int lastNumElementsToMoveToFront = numElements - indexToNextElementToNotMoveToBack;
+
+				// move back elements to front
+				memcpy(*elements + elementSize * i, *elements + elementSize * indexToNextElementToNotMoveToBack, elementSize * lastNumElementsToMoveToFront);
+				// move front elements from backup to back
+				memcpy(*elements + elementSize * (i + lastNumElementsToMoveToFront), elementsToMoveToBack, elementSize * numElementsToMoveToBack);
+				
+				*numElementsMovedToBack += numElementsToMoveToBack;
+			}
+			else
+			{
+				int numElementsToMoveBack = (numElements - *numElementsMovedToBack) - i;
+				// ^
+				// because if i == 0.. numElementsToMoveToBack should ==..
+				// .. numElements - *numElementsMovedToBack
+				
+				// ~don't actually move these elements as already at back~
+				// ^
+				// do move these back (but not to back as already at back)..
+				// .. to assure order is preserved
+				
+				char elementsToMoveBack[elementSize * numElementsToMoveBack]; //< 0 length array is not officially allowed in C, but guaranteed that numElementsToMoveToBack is >= 1 here
+				memcpy(elementsToMoveBack, *elements + elementSize * i, elementSize * numElementsToMoveBack);
+				
+				int lastNumElementsToMoveFront = *numElementsMovedToBack;
+				
+				memcpy(*elements + elementSize * i, *elements + elementSize * (i + numElementsToMoveBack), elementSize * lastNumElementsToMoveFront);
+				memcpy(*elements + elementSize * (i + lastNumElementsToMoveFront), elementsToMoveBack, elementSize * numElementsToMoveBack);
+				
+				*numElementsMovedToBack += numElementsToMoveBack;
+			}
+		}
+		else
+		{
+			++i;
+		}
+	}
 }

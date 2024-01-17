@@ -5,15 +5,18 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define min(a, b) a < b ? a : b
 
 
 //#define CALL(a) a; fputs(#a "\n", stdout)
 
-// NOTE: tests am_search_in
+//********************************* analyzing *********************************
+
+// NOTE: tests am_search_first_in
 //       ^
-//       am_is_in not tested as is implemented using am_search_in
+//       am_is_in not tested as is implemented using am_search_first_in
 int numTimesTest1Ran = 0;
 int test_1()
 {
@@ -24,13 +27,14 @@ int test_1()
 		numbers[i] = 1 + 2 * i;
 	}
 	
-	int a = 1 + 4 * numTimesTest1Ran; //< 1 -> 5 -> 9 -> 13 -> 17 -> 21 -> 25 -> 29 -> 33 -> 37
-	int expectedIndex = 2 * numTimesTest1Ran;
+	int maxNumTimesTestCanRun = ceilf((float)numNumbers / 2.0f);
+	int query = 1 + 4 * (numTimesTest1Ran % maxNumTimesTestCanRun); //< 1 -> 5 -> 9 -> 13 -> 17 -> 21 -> 25 -> 29 -> 33 -> 37
+	int expectedIndex = 2 * (numTimesTest1Ran % maxNumTimesTestCanRun);
 	
 	int index;
-	if(am_search_in2(NULL, numNumbers, numbers, &a, &index) == 0)
+	if(am_search_first_in2(NULL, numNumbers, numbers, &query, &index) == 0)
 	{
-		fprintf(stderr, "error: am_search_in2(NULL, &numNumbers, numbers, %i, &index) == 0\n", a);
+		fprintf(stderr, "error: am_search_first_in2(NULL, &numNumbers, numbers, &%i, &index) == 0\n", query);
 		
 		return 0;
 	}
@@ -47,10 +51,63 @@ int test_1()
 	return 1;
 }
 
+// NOTE: tests am_search_in
+int numTimesTest2Ran = 0;
+int test_2()
+{
+	int numNumbers = 18;
+	int numbers[/*numNumbers*/] = { 1, 2, 3, 1, 3, 2, 2, 1, 3, 2, 3, 1, 3, 1, 2, 3, 2, 1 };
+	
+	int query = 1 + (numTimesTest2Ran % 3);
+	
+	int numExpectedIndices = numNumbers / 3;
+	int expectedIndices[/*3*/][/*numExpectedIndices*/6] = {
+			{ 0, 3, 7, 11, 13, 17 }, //< 1
+			{ 1, 5, 6, 9, 14, 16 }, //< 2
+			{ 2, 4, 8, 10, 12, 15 } //< 3
+		};
+	
+	int numIndices;
+	int indices[numNumbers];
+	//if(am_search_in2(NULL, numNumbers, numbers, &query, &numIndices, &indices) == 0)
+	// NOTE: for some reason not clear to me above is not allowed but below is
+	//       ^
+	//       see..
+	//       .. https://www.codeproject.com/Questions/5375895/Why-is-address-of-array-not-convertible-to-in-C
+	int* a = indices;
+	if(am_search_in2(NULL, numNumbers, numbers, &query, &numIndices, &a) == 0)
+	{
+		fprintf(stderr, "am_search_in2(NULL, numIndices, indices, &%i, &numIndices, indices) == 0\n", query);
+		
+		return 0;
+	}
+	
+	if(numIndices != numExpectedIndices)
+	{
+		fprintf(stderr, "numIndices != %i (numIndices == %i)\n", numExpectedIndices, numIndices);
+		
+		return 0;
+	}
+	
+	for(int i = 0; i < numIndices; ++i)
+	{
+		if(indices[i] != expectedIndices[query - 1][i])
+		{
+			fprintf(stderr, "indices[%i] != %i (indices[%i] == %i)\n", i, expectedIndices[query - 1][i], i, indices[i]);
+			
+			return 0;
+		}
+	}
+	
+	++numTimesTest2Ran;
+	
+	return 1;
+}
+
 // NOTE: tests..
 //       .. am_get_differences
 //       .. am_get_similarities
-int test_2()
+int test_3()
 {
 	int numNumbers1 = 5;
 	int numbers1[numNumbers1];// = { 1, 2, 3, 4, 5 };
@@ -70,7 +127,12 @@ int test_2()
 	int indexPerDifference1[numNumbers1];
 	int numDifferences2;
 	int indexPerDifference2[numNumbers2];
-	am_get_differences2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numDifferences1, indexPerDifference1, &numDifferences2, indexPerDifference2);
+	//am_get_differences2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numDifferences1, &indexPerDifference1, &numDifferences2, &indexPerDifference2);
+	// NOTE: see comment in test_2 about am_search_in (same applies here to..
+	//       .. am_get_differences)
+	int* a = indexPerDifference1;
+	int* b = indexPerDifference2;
+	am_get_differences2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numDifferences1, &a, &numDifferences2, &b);
 	// ^
 	// numDifferences1 == 2
 	// indexPerDifference1 == { 2, 4 }; //< numbers 3, 5
@@ -113,25 +175,37 @@ int test_2()
 	}
 	
 	int numMaxSimilarities = min(numNumbers1, numNumbers2);
-	int numSimilarities;
+	int numSimilarities1;
 	struct am_similarity_t similarities1[numMaxSimilarities];
+	int numSimilarities2;
 	struct am_similarity_t similarities2[numMaxSimilarities];
 	
-	am_get_similarities2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numSimilarities, similarities1, similarities2);
+	//am_get_similarities2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numSimilarities1, &similarities1, &numSimilarities2, &similarities2);
+	// NOTE: see comment in test_2 about am_search_in (same applies here to..
+	//       .. am_get_similarities)
+	struct am_similarity_t* c = similarities1;
+	struct am_similarity_t* d = similarities2;
+	am_get_similarities2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numSimilarities1, &c, &numSimilarities2, &d);
 	// ^
-	// numSimilarities = 3
+	// numSimilarities1 == numSimilarities2 == 3
 	// similarities1 == { { 0, 0 }, { 1, 2 }, { 3, 1 } }; //< numbers 1, 2, 4
 	// similarities2 == { { 0, 0 }, { 3, 1 }, { 1, 2 } }; //< numbers 1, 4, 2
 	
 	int numExpectedSimilarities = 3;
 	struct am_similarity_t expectedSimilarities1[] = { { 0, 0 }, { 1, 2 }, { 3, 1 } };
 	struct am_similarity_t expectedSimilarities2[] = { { 0, 0 }, { 3, 1 }, { 1, 2 } };
-	if(numSimilarities != numExpectedSimilarities)
+	if(numSimilarities1 != numExpectedSimilarities)
 	{
-		fprintf(stderr, "error: numSimilarities != %i (numSimilarities == %i)\n", numExpectedSimilarities, numSimilarities);
+		fprintf(stderr, "error: numSimilarities1 != %i (numSimilarities1 == %i)\n", numExpectedSimilarities, numSimilarities1);
 		
 		return 0;
 	}
+	if(numSimilarities2 != numExpectedSimilarities)
+	{
+		fprintf(stderr, "error: numSimilarities2 != %i (numSimilarities2 == %i)\n", numExpectedSimilarities, numSimilarities2);
+		return 0;
+	}
+	int numSimilarities = numExpectedSimilarities;
 	for(int i = 0; i < numSimilarities; ++i)
 	{
 		//if(~((similarities1[i].index1 == expectedSimilarities1[i].index1) & (similarities1[i].index2 == expectedSimilarities1[i].index2)))
@@ -153,10 +227,17 @@ int test_2()
 	return 1;
 }
 
+//********************************** editting *********************************
+
+// TODO: random crashes occured during..
+//       .. test 4 (multiple times, didn't complete)
+//       .. test 6 (didn't complete)
+//       .. test 14 (multiple times, didn't complete)
+
 // NOTE: tests..
 //       .. am_add_num_elements
 //       .. am_remove_elements
-int test_3()
+int test_4()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -180,11 +261,11 @@ int test_3()
 		fprintf(stderr, "error: numNumbers != 0 (numNumbers == %i)\n", numNumbers);
 		return 0;
 	}
-
+	
 	return 1;
 }
 // NOTE: tests am_add_elements
-int test_4()
+int test_5()
 {
 	int numNumbers;
 	int* numbers;
@@ -215,7 +296,7 @@ int test_4()
 }
 
 // NOTE: tests am_append_num_elements
-int test_5()
+int test_6()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[numNumbers];
@@ -249,7 +330,7 @@ int test_5()
 	return 1;
 }
 // NOTE: tests am_append_elements
-int test_6()
+int test_7()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[5];
@@ -289,15 +370,15 @@ int test_6()
 	return 1;
 }
 
-// NOTE: tests am_append_or_add_num_elements
-int test_7()
+// NOTE: tests am_add_or_append_num_elements
+int test_8()
 {
 	int numNumbers = 0;
 	int* numbers;
 	
 	int numNewNumbers1 = 5;
 	
-	am_append_or_add_num_elements2(&numNumbers, &numbers, numNewNumbers1);
+	am_add_or_append_num_elements2(&numNumbers, &numbers, numNewNumbers1);
 	if(numNumbers != numNewNumbers1)
 	{
 		fprintf(stderr, "error: numNumbers != %i (numNumbers == %i)\n", numNewNumbers1, numNumbers);
@@ -310,7 +391,7 @@ int test_7()
 	
 	int numNewNumbers2 = 2;
 	
-	am_append_or_add_num_elements2(&numNumbers, &numbers, numNewNumbers2);
+	am_add_or_append_num_elements2(&numNumbers, &numbers, numNewNumbers2);
 	if(numNumbers != numNewNumbers1 + numNewNumbers2)
 	{
 		fprintf(stderr, "error: numNumbers != %i (numNumbers == %i)\n", numNewNumbers1 + numNewNumbers2, numNumbers);
@@ -330,8 +411,8 @@ int test_7()
 	
 	return 1;
 }
-// NOTE: tests am_append_or_add_elements
-int test_8()
+// NOTE: tests am_add_or_append_elements
+int test_9()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -343,7 +424,7 @@ int test_8()
 		newNumbers1[i] = (i + 1) * (i + 1);
 	}
 	
-	am_append_or_add_elements2(&numNumbers, &numbers, numNewNumbers1, newNumbers1);
+	am_add_or_append_elements2(&numNumbers, &numbers, numNewNumbers1, newNumbers1);
 	if(numNumbers != numNewNumbers1)
 	{
 		fprintf(stderr, "error: numNumbers != %i (numNumbers == %i)\n", numNewNumbers1, numNumbers);
@@ -366,7 +447,7 @@ int test_8()
 		newNumbers2[i] = (a + 1) * (a + 1);
 	}
 	
-	am_append_or_add_elements2(&numNumbers, &numbers, numNewNumbers2, newNumbers2);
+	am_add_or_append_elements2(&numNumbers, &numbers, numNewNumbers2, newNumbers2);
 	if(numNumbers != numNewNumbers1 + numNewNumbers2)
 	{
 		fprintf(stderr, "error: numNumbers != %i (numNumbers == %i)\n", numNewNumbers1 + numNewNumbers2, numNumbers);
@@ -388,7 +469,7 @@ int test_8()
 }
 
 // NOTE: tests am_replace_elements
-int test_9()
+int test_10()
 {
 	int numNumbers = 12;
 	int* numbers = malloc(sizeof(int) * numNumbers);
@@ -426,7 +507,7 @@ int test_9()
 }
 
 // NOTE: tests am_add_or_replace_elements
-int test_10()
+int test_11()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -483,7 +564,7 @@ int test_10()
 // NOTE: tests..
 //       .. am_remove_first_num_elements
 //       .. am_remove_last_num_elements
-int test_11()
+int test_12()
 {
 	int numNumbers = 12;
 	//int* numbers = new int[numNumbers];
@@ -538,7 +619,7 @@ int test_11()
 }
 
 // NOTE: tests am_remove_num_elements_at
-int test_12()
+int test_13()
 {
 	int numNumbers = 12;
 	//int* numbers = new int[numNumbers];
@@ -584,7 +665,7 @@ int test_12()
 }
 
 // NOTE: test whether am_*_(one_)element (i.e. macros) compile
-int test_13()
+int test_14()
 {
 	int numNumbers;
 	int* numbers;
@@ -594,13 +675,13 @@ int test_13()
 	int b = 2;
 	am_append_element2(&numNumbers, &numbers, &b);
 	int c = 3;
-	am_append_or_add_element2(&numNumbers, &numbers, &c);
+	am_add_or_append_element2(&numNumbers, &numbers, &c);
 	
 	am_remove_elements2(&numNumbers, &numbers);
 	
 	am_add_one_element2(&numNumbers, &numbers);
 	am_append_one_element2(&numNumbers, &numbers);
-	am_append_or_add_one_element2(&numNumbers, &numbers);
+	am_add_or_append_one_element2(&numNumbers, &numbers);
 
 	am_remove_first_element2(&numNumbers, &numbers);
 	am_remove_element_at2(&numNumbers, &numbers, 1);
@@ -609,8 +690,10 @@ int test_13()
 	return 1;
 }
 
+//************************ both analyzing and editing *************************
+
 // NOTE: tests am_append_differences
-int test_14()
+int test_15()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[numNumbers];
@@ -662,7 +745,7 @@ int test_14()
 }
 
 // NOTE: tests am_remove_similarities
-int test_15()
+int test_16()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[numNumbers];
@@ -710,25 +793,203 @@ int test_15()
 	return 1;
 }
 
+// NOTE: tests am_remove
+int numTimesTest17Ran = 0;
+int test_17()
+{
+	int numNumbers = 10 + (numTimesTest17Ran % 3);
+	int* numbers = (int*)malloc(sizeof(int) * numNumbers);
+	for(int i = 0; i < numNumbers; ++i)
+	{
+		if(i % 3 == 0)
+		{
+			numbers[i] = -1;
+		}
+		else
+		{
+			numbers[i] = i;
+		}
+	}
+	
+	int numExpectedNumbersRemoved = ceilf(((float)numNumbers) / 3.0f); //< as "== 0" always ceil
+	
+	int numNumbersRemoved;
+	int query = -1;
+	am_remove2(NULL, &numNumbers, &numbers, &query, &numNumbersRemoved);
+	// ^
+	// not a problem to use &numbers here because is "int* numbers" not "int..
+	// .. numbers[<..>]" unlike in test_2 where is "int <..> [<..>]" because..
+	// .. won't be reallocated
+
+	int bSuccess = 1;
+	do
+	{
+		if(numNumbersRemoved != numExpectedNumbersRemoved)
+		{
+			fprintf(stderr, "error: numNumbersRemoved != %i (numNumbersRemoved == %i)\n", numExpectedNumbersRemoved, numNumbersRemoved);
+		
+			bSuccess = 0;
+			break;
+		}
+		
+		for(int i = 0, j = 0; i < numNumbers; ++i)
+		{
+			if(i % 3 == 0)
+			{
+				continue;
+			}
+			
+			if(numbers[j] != i)
+			{
+				fprintf(stderr, "error: numbers[%i] != %i (numbers[%i] == %i)\n", j, i, j, numbers[j]);
+				
+				bSuccess = 0;
+				break;
+			}
+			
+			++j;
+		}
+		/*
+		if(bSuccess == 0)
+		{
+			break;
+		}
+		*/
+	} while(0);
+	//delete numbers;
+	free(numbers);
+	if(bSuccess == 0)
+	{
+		return 0;
+	}
+	
+	++numTimesTest17Ran;
+	
+	return 1;
+}
+
+/*
+// NOTE: tests am_move_to_front
+int test_18()
+{
+	//... //< am_move_to_front is not implemented
+
+	return 1;
+}
+*/
+
+// NOTE: tests am_move_to_back
+int numTimesTest19Ran = 0;
+int test_19()
+{
+	int numNumbers = 10 + (numTimesTest19Ran % 3);
+	int numbers[numNumbers];
+	for(int i = 0; i < numNumbers; ++i)
+	{
+		if(i % 3 == 0)
+		{
+			numbers[i] = -1;
+		}
+		else
+		{
+			numbers[i] = i;
+		}
+	}
+	
+	int numExpectedNumbersMovedToBack = ceilf(((float)numNumbers) / 3.0f); //< as "== 0" always ceil
+	
+	int numNumbersMovedToBack;
+	int query = -1;
+	//am_move_to_back2(NULL, numNumbers, &numbers, &numExpectedNumbersMovedToBack);
+	// NOTE: see comment in test_2 about am_search_in (same applies here to..
+	//       .. am_move_to_back)
+	int* a = numbers;
+	am_move_to_back2(NULL, numNumbers, &a, &query, &numNumbersMovedToBack);
+	
+	if(numNumbersMovedToBack != numExpectedNumbersMovedToBack)
+	{
+		fprintf(stderr, "error: numNumbersMovedToBack != %i (numNumbersMovedToBack == %i)\n", numExpectedNumbersMovedToBack, numNumbersMovedToBack);
+	
+		return 0;
+	}
+	
+	int numNumbersNotMovedToBack = numNumbers - numNumbersMovedToBack;
+	
+	//             front  back
+	//             v      v
+	for(int i = 0, j = 0; i < numNumbers; ++i)
+	{
+		if(j < numNumbersNotMovedToBack)
+		{
+			if(i % 3 == 0)
+			{
+				continue;
+			}
+			
+			if(numbers[j] != i)
+			{
+				fprintf(stderr, "error: numbers[%i] != %i (numbers[%i] == %i)\n", j, i, j, numbers[j]);
+				
+				return 0;
+			}
+			
+			++j;
+		}
+		else
+		{
+			if(numbers[j] != -1)
+			{
+				fprintf(stderr, "error: numbers[%i] != -1 (numbers[%i] == %i)\n", j, j, numbers[j]);
+				
+				return 0;
+			}
+			
+			++j;
+		}
+	}
+	
+	++numTimesTest19Ran;
+
+	return 1;
+}
+
 //*****************************************************************************
 
 int main(int argc, char** argv)
 {
-	TM_TEST(1, 9) //< can only run max 10 times as test uses variable numTimesTest1Ran
-	TM_TEST2(2)
-	TM_TEST2(3)
-	TM_TEST2(4)
-	TM_TEST2(5)
-	TM_TEST2(6)
-	TM_TEST2(7)
-	TM_TEST2(8)
-	TM_TEST2(9)
-	TM_TEST2(10)
-	TM_TEST2(11)
-	TM_TEST2(12)
-	TM_TEST2(13)
-	TM_TEST2(14)
-	TM_TEST2(15)
+	// TODO: make it such that every test uses different values every run..
+	//       .. for 10 runs and then repeats?
+	//       ^
+	//       currently only test 1 uses 10 and test 2 uses 3
+
+	int numRepetitions = 100;
+	// ^
+	// excess repetitions actually helped once to detect writing to..
+	// .. unallocated pointer which resulted in "heap corruption" error in..
+	// .. windows
+	
+	// analyzing
+	TM_TEST(1, numRepetitions)
+	TM_TEST(2, numRepetitions)
+	TM_TEST(3, numRepetitions)
+	// editing
+	TM_TEST(4, numRepetitions)
+	TM_TEST(5, numRepetitions)
+	TM_TEST(6, numRepetitions)
+	TM_TEST(7, numRepetitions)
+	TM_TEST(8, numRepetitions)
+	TM_TEST(9, numRepetitions)
+	TM_TEST(10, numRepetitions)
+	TM_TEST(11, numRepetitions)
+	TM_TEST(12, numRepetitions)
+	TM_TEST(13, numRepetitions)
+	TM_TEST(14, numRepetitions)
+	// both analyzing and editing
+	TM_TEST(15, numRepetitions)
+	TM_TEST(16, numRepetitions)
+	TM_TEST(17, numRepetitions)
+	//TM_TEST(18, numRepetitions)
+	TM_TEST(19, numRepetitions)
 	
 	return 0;
 }
