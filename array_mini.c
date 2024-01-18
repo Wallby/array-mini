@@ -87,7 +87,17 @@ void am_get_uniques(int elementSize, int(*predicate)(void*, void*), int numEleme
 	int numSimilarities;
 	struct am_similarity_t similarities[numElements - 1];
 	//am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &similarities, NULL, NULL);
-	am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, (struct am_similarity_t**)&similarities, NULL, NULL);
+	// NOTE: above doesn't work because &similarities actually contains the..
+	//       .. same address as similarities but only the pointer is of a..
+	//       .. different type. Maybe this is to avoid an implicit pointer..
+	//       .. variable to be created as similarities stored on the stack..
+	//       .. means a pointer variable is not required, whereas "expecting..
+	//       .. &similarities to return a pointer to such a variable" thus..
+	//       .. would mean creating an implicit variable
+	//       ^
+	//       https://www.codeproject.com/Questions/5375895/Why-is-address-of-array-not-convertible-to-in-C
+	struct am_similarity_t* a = similarities;
+	am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &a, NULL, NULL);
 	
 	if(numSimilarities == numElements)
 	{
@@ -126,7 +136,9 @@ void am_get_duplicates(int elementSize, int(*predicate)(void*, void*), int numEl
 	int numSimilarities;
 	struct am_similarity_t similarities[numElements - 1];
 	//am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &similarities, NULL, NULL);
-	am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, (struct am_similarity_t**)&similarities, NULL, NULL);
+	// NOTE: see comment in am_get_uniques (same applies here)
+	struct am_similarity_t* a = similarities;
+	am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &a, NULL, NULL);
 	
 	if(numSimilarities == 0)
 	{
@@ -470,8 +482,7 @@ void am_remove_similarities(int elementSize, int(*predicate)(void*, void*), int*
 	int numSimilarities;
 	struct am_similarity_t similarities[maxNumSimilarities];
 	//am_get_similarities(elementSize, predicate, *numElements, *elements, numElementsToRemove, elementsToRemove, &numSimilarities, &similarities, NULL, NULL);
-	// NOTE: see comment in am_append_differences about am_get_differences..
-	//       .. above (same applies here to am_get_similarities)
+	// NOTE: see comment in am_get_uniques (same applies here)
 	struct am_similarity_t* a = similarities;
 	am_get_similarities(elementSize, predicate, *numElements, *elements, numElementsToRemove, elementsToRemove, &numSimilarities, &a, NULL, NULL);
 	// ^

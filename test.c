@@ -70,10 +70,7 @@ int test_2()
 	int numIndices;
 	int indices[numNumbers];
 	//if(am_search_in2(NULL, numNumbers, numbers, &query, &numIndices, &indices) == 0)
-	// NOTE: for some reason not clear to me above is not allowed but below is
-	//       ^
-	//       see..
-	//       .. https://www.codeproject.com/Questions/5375895/Why-is-address-of-array-not-convertible-to-in-C
+	// NOTE: see comment in am_get_uniques (same applies here)
 	int* a = indices;
 	if(am_search_in2(NULL, numNumbers, numbers, &query, &numIndices, &a) == 0)
 	{
@@ -128,8 +125,7 @@ int test_3()
 	int numDifferences2;
 	int indexPerDifference2[numNumbers2];
 	//am_get_differences2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numDifferences1, &indexPerDifference1, &numDifferences2, &indexPerDifference2);
-	// NOTE: see comment in test_2 about am_search_in (same applies here to..
-	//       .. am_get_differences)
+	// NOTE: see comment in am_get_uniques (same applies here)
 	int* a = indexPerDifference1;
 	int* b = indexPerDifference2;
 	am_get_differences2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numDifferences1, &a, &numDifferences2, &b);
@@ -181,8 +177,7 @@ int test_3()
 	struct am_similarity_t similarities2[numMaxSimilarities];
 	
 	//am_get_similarities2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numSimilarities1, &similarities1, &numSimilarities2, &similarities2);
-	// NOTE: see comment in test_2 about am_search_in (same applies here to..
-	//       .. am_get_similarities)
+	// NOTE: see comment in am_get_uniques (same applies here)
 	struct am_similarity_t* c = similarities1;
 	struct am_similarity_t* d = similarities2;
 	am_get_similarities2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numSimilarities1, &c, &numSimilarities2, &d);
@@ -901,8 +896,7 @@ int test_19()
 	int numNumbersMovedToBack;
 	int query = -1;
 	//am_move_to_back2(NULL, numNumbers, &numbers, &numExpectedNumbersMovedToBack);
-	// NOTE: see comment in test_2 about am_search_in (same applies here to..
-	//       .. am_move_to_back)
+	// NOTE: see comment in am_get_uniques (same applies here)
 	int* a = numbers;
 	am_move_to_back2(NULL, numNumbers, &a, &query, &numNumbersMovedToBack);
 	
