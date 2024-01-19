@@ -84,37 +84,22 @@ int am_is_in(int elementSize, int(*predicate)(void*, void*), int numElements, vo
 
 void am_get_uniques(int elementSize, int(*predicate)(void*, void*), int numElements, void* elements, int* numUniques, int** indexPerUnique)
 {
-	int numSimilarities;
-	struct am_similarity_t similarities[numElements - 1];
-	//am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &similarities, NULL, NULL);
-	// NOTE: above doesn't work because &similarities actually contains the..
-	//       .. same address as similarities but only the pointer is of a..
-	//       .. different type. Maybe this is to avoid an implicit pointer..
-	//       .. variable to be created as similarities stored on the stack..
-	//       .. means a pointer variable is not required, whereas "expecting..
-	//       .. &similarities to return a pointer to such a variable" thus..
-	//       .. would mean creating an implicit variable
-	//       ^
-	//       https://www.codeproject.com/Questions/5375895/Why-is-address-of-array-not-convertible-to-in-C
-	struct am_similarity_t* a = similarities;
-	am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &a, NULL, NULL);
-	
-	if(numSimilarities == numElements)
-	{
-		return;
-	}
-	
-	int numUniquesThusfar = 0;
+	*numUniques = 0;
 	for(int i = 0; i < numElements; ++i)
 	{
-		//if(am_is_in2([](struct am_similarity_t* a, int* query){ return a->index1 == query ? 1 : 0; }, numSimilarities, similarities, i) == 1)
-		//{
-		//	continue;
-		//}
+		void* element1 = elements + elementSize * i;
+		
 		int bIsDuplicate = 0;
-		for(int j = 0; j < numSimilarities; ++j)
+		for(int j = 0; j < numElements; ++j)
 		{
-			if(similarities[j].index1 == i)
+			if(i == j)
+			{
+				continue;
+			}
+			
+			void* element2 = elements + elementSize * j;
+			
+			if(predicate2(elementSize, predicate, element1, element2) == 1)
 			{
 				bIsDuplicate = 1;
 				break;
@@ -125,87 +110,71 @@ void am_get_uniques(int elementSize, int(*predicate)(void*, void*), int numEleme
 			continue;
 		}
 		
-		(*indexPerUnique)[numUniquesThusfar] = i;
-		++numUniquesThusfar;
+		(*indexPerUnique)[*numUniques] = i;
+		++(*numUniques);
 	}
-	*numUniques = numUniquesThusfar;
 }
 
 void am_get_duplicates(int elementSize, int(*predicate)(void*, void*), int numElements, void* elements, int* numDuplicates, struct am_duplicate_t** duplicates)
 {
-	int numSimilarities;
-	struct am_similarity_t similarities[numElements - 1];
-	//am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &similarities, NULL, NULL);
-	// NOTE: see comment in am_get_uniques (same applies here)
-	struct am_similarity_t* a = similarities;
-	am_get_similarities(elementSize, predicate, numElements, elements, numElements, elements, &numSimilarities, &a, NULL, NULL);
-	
-	if(numSimilarities == 0)
-	{
-		return;
-	}
-	
-	int numDuplicatesThusfar = 0;
-	
-	int numIndicesThusfar = 0;
-	int indicesThusfar[numSimilarities];
-	// ^
-	// numIndices for which there is now an element in duplicates
-	
+	*numDuplicates = 0;
 	for(int i = 0; i < numElements; ++i)
 	{
-		//if(am_is_in2(NULL, numIndicesThusfar, indicesThusfar, i) == 1)
-		int bIsIndex = 0;
-		for(int j = 0; j < numIndicesThusfar; ++j)
+		//if(am_is_in2([](struct am_duplicate_t* a, int i){ return a->index == i ? 1 : 0; }, numDuplicates, duplicates, i) == 1)
+		int bIsDuplicate1 = 0;
+		for(int j = 0; j < *numDuplicates; ++j)
 		{
-			if(indicesThusfar[j] == i)
+			if((*duplicates)[j].index == i)
 			{
-				bIsIndex = 1;
+				bIsDuplicate1 = 1;
 				break;
 			}
 		}
-		if(bIsIndex == 1)
+		if(bIsDuplicate1 == 1)
 		{
 			continue;
 		}
+	
+		void* element1 = elements + elementSize * i;
 		
-		int numIndices;
-		int indices[numSimilarities]; //< # max indices == # similarities
+		struct am_duplicate_t* firstDuplicate = NULL; //< first occurance of duplicate
 		
-		// actually stores indices each to similarity, index to duplicate is..
-		// .. similarities[indices[..]].index2
-		// v
-		//if(am_search_in2([](struct am_similarity_t* a, int* query){ return a->index1 == query ? 1 : 0; }, numSimilarities, similarities, i, &numIndices, &indices) == 0)
-		// doesn't store indices each to similarity unlike above
-		// v
-		for(int j = 0; j < numSimilarities; ++j)
+		for(int j = i + 1; j < numElements; ++j)
 		{
-			if(similarities[j].index1 == i)
+			int bIsDuplicate2 = 0;
+			for(int ii = 0; ii < *numDuplicates; ++ii)
 			{
-				indices[numIndices] = similarities[j].index2;
-				++numIndices;
+				if((*duplicates)[ii].index == j)
+				{
+					bIsDuplicate2 = 1;
+					break;
+				}
+			}
+			if(bIsDuplicate2 == 1)
+			{
+				continue;
+			}
+		
+			void* element2 = elements + elementSize * j;
+			
+			if(predicate2(elementSize, predicate, element1, element2) == 1)
+			{
+				if(firstDuplicate == NULL)
+				{
+					firstDuplicate = &(*duplicates)[*numDuplicates];
+					firstDuplicate->index = i;
+					firstDuplicate->numOccurrences = 1;
+					++(*numDuplicates);
+				}
+
+				struct am_duplicate_t* duplicate = &(*duplicates)[*numDuplicates];
+				duplicate->index = j;
+				++(*numDuplicates);
+
+				++firstDuplicate->numOccurrences;
 			}
 		}
-		if(numIndices == 0)
-		{
-			continue;
-		}
-		
-		(*duplicates)[numDuplicatesThusfar].index = indices[0];
-		++numDuplicatesThusfar;
-		indicesThusfar[0] = indices[0];
-		++numIndicesThusfar;
-		for(int j = 1; j < numIndices; ++j)
-		{
-			(*duplicates)[numDuplicatesThusfar - 1].nextDuplicate = &(*duplicates)[numDuplicatesThusfar];
-			(*duplicates)[numDuplicatesThusfar].index = indices[j];
-			++numDuplicatesThusfar;
-			indicesThusfar[numIndicesThusfar] = indices[j];
-			++numIndicesThusfar;
-		}
-		(*duplicates)[numDuplicatesThusfar - 1].nextDuplicate = NULL;
 	}
-	*numDuplicates = numDuplicatesThusfar;
 }
 
 void am_get_differences(int elementSize, int(*predicate)(void*, void*), int numElements1, void* elements1, int numElements2, void* elements2, int* numDifferences1, int** indexPerDifference1, int* numDifferences2, int** indexPerDifference2)
@@ -477,12 +446,18 @@ void am_append_differences(int elementSize, int(*predicate)(void*, void*), int* 
 
 void am_remove_similarities(int elementSize, int(*predicate)(void*, void*), int* numElements, void** elements, int numElementsToRemove, void* elementsToRemove)
 {
-	int maxNumSimilarities = min(*numElements, numElementsToRemove) - 1;
-	
 	int numSimilarities;
-	struct am_similarity_t similarities[maxNumSimilarities];
+	struct am_similarity_t similarities[*numElements];
 	//am_get_similarities(elementSize, predicate, *numElements, *elements, numElementsToRemove, elementsToRemove, &numSimilarities, &similarities, NULL, NULL);
-	// NOTE: see comment in am_get_uniques (same applies here)
+	// NOTE: above doesn't work because &similarities actually contains the..
+	//       .. same address as similarities but only the pointer is of a..
+	//       .. different type. Maybe this is to avoid an implicit pointer..
+	//       .. variable to be created as similarities stored on the stack..
+	//       .. means a pointer variable is not required, whereas "expecting..
+	//       .. &similarities to return a pointer to such a variable" thus..
+	//       .. would mean creating an implicit variable
+	//       ^
+	//       https://www.codeproject.com/Questions/5375895/Why-is-address-of-array-not-convertible-to-in-C
 	struct am_similarity_t* a = similarities;
 	am_get_similarities(elementSize, predicate, *numElements, *elements, numElementsToRemove, elementsToRemove, &numSimilarities, &a, NULL, NULL);
 	// ^

@@ -51,8 +51,16 @@ void am_get_uniques(int elementSize, int(*predicate)(void*, void*), int numEleme
 
 struct am_duplicate_t
 {
+	// NOTE: numOccurrences is always set for duplicates[0], then for every..
+	//       .. next element numOccurrences is set if element is..
+	//       .. duplicates[<index to previous element for which..
+	//       .. numOccurrences was set> + duplicates[<index to previous..
+	//       .. element for which numOccurrences was set>].numOccurrences - 1]
+	//       ^
+	//       e.g. after duplicates[0] next element for which numOccurrences..
+	//       .. is set is duplicates[0 + duplicates[0].numOccurrences - 1]
+	int numOccurrences; //< is always >= 2
 	int index;
-	struct am_duplicate_t* nextDuplicate; //< if == NULL.. last element of this duplicate
 };
 // NOTE: duplicates within one array
 // NOTE: unlike am_get_similarities, which checks whether a value occurs in..
@@ -99,10 +107,10 @@ struct am_similarity_t
 //       .. numElements2 > 0
 //       .. if numSimilarities1 != NULL..
 //          .. similarities1 != NULL
-//          .. lengthof similarities1 == numElements1 - 1
+//          .. lengthof similarities1 == numElements1
 //       .. if numSimilarities2 != NULL..
 //          .. similarities2 != NULL
-//          .. lengthof similarities2 == numElements2 - 1
+//          .. lengthof similarities2 == numElements2 
 //       numSimilarities1 may == NULL
 //       numSimilarities2 may == NULL
 //       if numSimilarities1 == NULL.. will ignore similarities1

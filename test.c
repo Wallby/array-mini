@@ -70,7 +70,7 @@ int test_2()
 	int numIndices;
 	int indices[numNumbers];
 	//if(am_search_in2(NULL, numNumbers, numbers, &query, &numIndices, &indices) == 0)
-	// NOTE: see comment in am_get_uniques (same applies here)
+	// NOTE: see comment in am_remove_similarities (same applies here)
 	int* a = indices;
 	if(am_search_in2(NULL, numNumbers, numbers, &query, &numIndices, &a) == 0)
 	{
@@ -102,9 +102,113 @@ int test_2()
 }
 
 // NOTE: tests..
+//       .. am_get_uniques
+//       .. am_get_duplicates
+//int numTimesTest3Ran = 0;
+int test_3()
+{
+	int numNumbers = 9;
+	int numbers[/*numNumbers*/] = { 0, 1, 6, 0, 1, 9, 0, 1, 12 }; //< if numTimesTest3Ran % 3 == 0.. 0,1,6,0,1,9,0,1,12
+	
+	int numExpectedUniques = numNumbers / 3; //< works as numNumbers % 3 == 0
+	int expectedIndexPerUnique[/*numExpectedUniques*/] = { 2, 5, 8 };
+	
+	int numExpectedDuplicates = numNumbers - numExpectedUniques;
+	struct am_duplicate_t expectedDuplicates[numExpectedDuplicates];
+	expectedDuplicates[0].numOccurrences = 3;
+	expectedDuplicates[0].index = 0;
+	expectedDuplicates[1].index = 3;
+	expectedDuplicates[2].index = 6;
+	expectedDuplicates[3].numOccurrences = 3;
+	expectedDuplicates[3].index = 1;
+	expectedDuplicates[4].index = 4;
+	expectedDuplicates[5].index = 7;
+	
+	/*
+	int numExpectedUniquesThusfar = 0;
+	int a = numTimesTest3Ran % 3;
+	for(int i = 0; i < numNumbers; ++i)
+	{
+		if((a + i) % 3 == 2)
+		{
+			++a;
+			
+			numbers[i] = 4 + i; //< offset by 4 to avoid worst case scenario of 4 + 0 being not unique
+			indexPerExpectedUnique[numExpectedUniquesThusfar] = i;
+			++numExpectedUniquesThusfar;
+		}
+		else
+		{
+			numbers[i] = (a + i) % 3;
+		}
+	}
+	*/
+	
+	int numUniques;
+	int indexPerUnique[numNumbers];
+	//am_get_uniques(NULL, numNumbers, numbers, &numUniques, &indexPerUnique);
+	int* b = indexPerUnique;
+	am_get_uniques2(NULL, numNumbers, numbers, &numUniques, &b);
+	
+	if(numUniques != numExpectedUniques)
+	{
+		fprintf(stderr, "error: numUniques != %i (numUniques == %i)\n", numExpectedUniques, numUniques);
+	
+		return 0;
+	}
+	
+	for(int i = 0; i < numUniques; ++i)
+	{
+		if(indexPerUnique[i] != expectedIndexPerUnique[i])
+		{
+			fprintf(stderr, "error: indexPerUnique[%i] != %i (indexPerUnique[%i] == %i)\n", i, expectedIndexPerUnique[i], i, indexPerUnique[i]);
+		
+			return 0;
+		}
+	}
+	
+	int numDuplicates;
+	struct am_duplicate_t duplicates[numNumbers];
+	//am_get_duplicates2(NULL, numNumbers, numbers, &numDuplicates, &c);
+	struct am_duplicate_t* c = duplicates;
+	am_get_duplicates2(NULL, numNumbers, numbers, &numDuplicates, &c);
+	
+	if(numDuplicates != numExpectedDuplicates)
+	{
+		fprintf(stderr, "error: numDuplicates != %i (numDuplicates == %i)\n", numExpectedDuplicates, numDuplicates);
+	
+		return 0;
+	}
+	
+	for(int i = 0; i < numDuplicates; i += duplicates[i].numOccurrences)
+	{
+		if(duplicates[i].numOccurrences != expectedDuplicates[i].numOccurrences)
+		{
+			fprintf(stderr, "error: duplicates[%i].numOccurrences != %i (duplicates[%i].numOccurrences == %i)\n", i, expectedDuplicates[i].numOccurrences, i, duplicates[i].numOccurrences);
+		
+			return 0;
+		}
+		
+		for(int j = i; j < duplicates[i].numOccurrences; ++j)
+		{
+			if(duplicates[j].index != expectedDuplicates[j].index)
+			{
+				fprintf(stderr, "error: duplicates[%i].index != %i (duplicates[%i].index == %i)\n", j, expectedDuplicates[i].index, j, duplicates[i].index); 
+			
+				return 0;
+			}
+		}
+	}
+	
+	//++numTimesTest3Ran;
+	
+	return 1;
+}
+
+// NOTE: tests..
 //       .. am_get_differences
 //       .. am_get_similarities
-int test_3()
+int test_4()
 {
 	int numNumbers1 = 5;
 	int numbers1[numNumbers1];// = { 1, 2, 3, 4, 5 };
@@ -125,7 +229,7 @@ int test_3()
 	int numDifferences2;
 	int indexPerDifference2[numNumbers2];
 	//am_get_differences2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numDifferences1, &indexPerDifference1, &numDifferences2, &indexPerDifference2);
-	// NOTE: see comment in am_get_uniques (same applies here)
+	// NOTE: see comment in am_remove_similarities (same applies here)
 	int* a = indexPerDifference1;
 	int* b = indexPerDifference2;
 	am_get_differences2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numDifferences1, &a, &numDifferences2, &b);
@@ -177,7 +281,7 @@ int test_3()
 	struct am_similarity_t similarities2[numMaxSimilarities];
 	
 	//am_get_similarities2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numSimilarities1, &similarities1, &numSimilarities2, &similarities2);
-	// NOTE: see comment in am_get_uniques (same applies here)
+	// NOTE: see comment in am_remove_similarities (same applies here)
 	struct am_similarity_t* c = similarities1;
 	struct am_similarity_t* d = similarities2;
 	am_get_similarities2(NULL, numNumbers1, numbers1, numNumbers2, numbers2, &numSimilarities1, &c, &numSimilarities2, &d);
@@ -222,17 +326,12 @@ int test_3()
 	return 1;
 }
 
-//********************************** editting *********************************
-
-// TODO: random crashes occured during..
-//       .. test 4 (multiple times, didn't complete)
-//       .. test 6 (didn't complete)
-//       .. test 14 (multiple times, didn't complete)
+//********************************** editing *********************************
 
 // NOTE: tests..
 //       .. am_add_num_elements
 //       .. am_remove_elements
-int test_4()
+int test_5()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -260,7 +359,7 @@ int test_4()
 	return 1;
 }
 // NOTE: tests am_add_elements
-int test_5()
+int test_6()
 {
 	int numNumbers;
 	int* numbers;
@@ -291,7 +390,7 @@ int test_5()
 }
 
 // NOTE: tests am_append_num_elements
-int test_6()
+int test_7()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[numNumbers];
@@ -325,7 +424,7 @@ int test_6()
 	return 1;
 }
 // NOTE: tests am_append_elements
-int test_7()
+int test_8()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[5];
@@ -366,7 +465,7 @@ int test_7()
 }
 
 // NOTE: tests am_add_or_append_num_elements
-int test_8()
+int test_9()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -407,7 +506,7 @@ int test_8()
 	return 1;
 }
 // NOTE: tests am_add_or_append_elements
-int test_9()
+int test_10()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -464,7 +563,7 @@ int test_9()
 }
 
 // NOTE: tests am_replace_elements
-int test_10()
+int test_11()
 {
 	int numNumbers = 12;
 	int* numbers = malloc(sizeof(int) * numNumbers);
@@ -502,7 +601,7 @@ int test_10()
 }
 
 // NOTE: tests am_add_or_replace_elements
-int test_11()
+int test_12()
 {
 	int numNumbers = 0;
 	int* numbers;
@@ -559,7 +658,7 @@ int test_11()
 // NOTE: tests..
 //       .. am_remove_first_num_elements
 //       .. am_remove_last_num_elements
-int test_12()
+int test_13()
 {
 	int numNumbers = 12;
 	//int* numbers = new int[numNumbers];
@@ -614,7 +713,7 @@ int test_12()
 }
 
 // NOTE: tests am_remove_num_elements_at
-int test_13()
+int test_14()
 {
 	int numNumbers = 12;
 	//int* numbers = new int[numNumbers];
@@ -660,7 +759,7 @@ int test_13()
 }
 
 // NOTE: test whether am_*_(one_)element (i.e. macros) compile
-int test_14()
+int test_15()
 {
 	int numNumbers;
 	int* numbers;
@@ -688,7 +787,7 @@ int test_14()
 //************************ both analyzing and editing *************************
 
 // NOTE: tests am_append_differences
-int test_15()
+int test_16()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[numNumbers];
@@ -740,7 +839,7 @@ int test_15()
 }
 
 // NOTE: tests am_remove_similarities
-int test_16()
+int test_17()
 {
 	int numNumbers = 5;
 	//int* numbers = new int[numNumbers];
@@ -789,10 +888,10 @@ int test_16()
 }
 
 // NOTE: tests am_remove
-int numTimesTest17Ran = 0;
-int test_17()
+int numTimesTest18Ran = 0;
+int test_18()
 {
-	int numNumbers = 10 + (numTimesTest17Ran % 3);
+	int numNumbers = 10 + (numTimesTest18Ran % 3);
 	int* numbers = (int*)malloc(sizeof(int) * numNumbers);
 	for(int i = 0; i < numNumbers; ++i)
 	{
@@ -858,14 +957,14 @@ int test_17()
 		return 0;
 	}
 	
-	++numTimesTest17Ran;
+	++numTimesTest18Ran;
 	
 	return 1;
 }
 
 /*
 // NOTE: tests am_move_to_front
-int test_18()
+int test_19()
 {
 	//... //< am_move_to_front is not implemented
 
@@ -874,10 +973,10 @@ int test_18()
 */
 
 // NOTE: tests am_move_to_back
-int numTimesTest19Ran = 0;
-int test_19()
+int numTimesTest20Ran = 0;
+int test_20()
 {
-	int numNumbers = 10 + (numTimesTest19Ran % 3);
+	int numNumbers = 10 + (numTimesTest20Ran % 3);
 	int numbers[numNumbers];
 	for(int i = 0; i < numNumbers; ++i)
 	{
@@ -896,7 +995,7 @@ int test_19()
 	int numNumbersMovedToBack;
 	int query = -1;
 	//am_move_to_back2(NULL, numNumbers, &numbers, &numExpectedNumbersMovedToBack);
-	// NOTE: see comment in am_get_uniques (same applies here)
+	// NOTE: see comment in am_remove_similarities (same applies here)
 	int* a = numbers;
 	am_move_to_back2(NULL, numNumbers, &a, &query, &numNumbersMovedToBack);
 	
@@ -942,7 +1041,7 @@ int test_19()
 		}
 	}
 	
-	++numTimesTest19Ran;
+	++numTimesTest20Ran;
 
 	return 1;
 }
@@ -966,8 +1065,8 @@ int main(int argc, char** argv)
 	TM_TEST(1, numRepetitions)
 	TM_TEST(2, numRepetitions)
 	TM_TEST(3, numRepetitions)
-	// editing
 	TM_TEST(4, numRepetitions)
+	// editing
 	TM_TEST(5, numRepetitions)
 	TM_TEST(6, numRepetitions)
 	TM_TEST(7, numRepetitions)
@@ -978,12 +1077,13 @@ int main(int argc, char** argv)
 	TM_TEST(12, numRepetitions)
 	TM_TEST(13, numRepetitions)
 	TM_TEST(14, numRepetitions)
-	// both analyzing and editing
 	TM_TEST(15, numRepetitions)
+	// both analyzing and editing
 	TM_TEST(16, numRepetitions)
 	TM_TEST(17, numRepetitions)
-	//TM_TEST(18, numRepetitions)
-	TM_TEST(19, numRepetitions)
+	TM_TEST(18, numRepetitions)
+	//TM_TEST(19, numRepetitions)
+	TM_TEST(20, numRepetitions)
 	
 	return 0;
 }
