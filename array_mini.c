@@ -649,13 +649,16 @@ void am_move_to_back(int elementSize, int(*predicate)(void*, void*), int numElem
 				// do move these back (but not to back as already at back)..
 				// .. to assure order is preserved
 				
-				char elementsToMoveBack[elementSize * numElementsToMoveBack]; //< 0 length array is not officially allowed in C, but guaranteed that numElementsToMoveToBack is >= 1 here
-				memcpy(elementsToMoveBack, *elements + elementSize * i, elementSize * numElementsToMoveBack);
-				
 				int lastNumElementsToMoveFront = *numElementsMovedToBack;
 				
-				memcpy(*elements + elementSize * i, *elements + elementSize * (i + numElementsToMoveBack), elementSize * lastNumElementsToMoveFront);
-				memcpy(*elements + elementSize * (i + lastNumElementsToMoveFront), elementsToMoveBack, elementSize * numElementsToMoveBack);
+				if(lastNumElementsToMoveFront > 0)
+				{
+					char elementsToMoveBack[elementSize * numElementsToMoveBack]; //< 0 length array is not officially allowed in C, but guaranteed that numElementsToMoveToBack is >= 1 here
+					memcpy(elementsToMoveBack, *elements + elementSize * i, elementSize * numElementsToMoveBack);
+					
+					memcpy(*elements + elementSize * i, *elements + elementSize * (i + numElementsToMoveBack), elementSize * lastNumElementsToMoveFront);
+					memcpy(*elements + elementSize * (i + lastNumElementsToMoveFront), elementsToMoveBack, elementSize * numElementsToMoveBack);
+				}
 				
 				*numElementsMovedToBack += numElementsToMoveBack;
 			}

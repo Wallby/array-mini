@@ -976,7 +976,10 @@ int test_19()
 int numTimesTest20Ran = 0;
 int test_20()
 {
-	int numNumbers = 10 + (numTimesTest20Ran % 3);
+	// NOTE: include testing with 1 number to cause am_move_to_back to move..
+	//       .. an element to back but not move any element to front?
+	//                v
+	int numNumbers = (1 + numTimesTest20Ran % 10) + (numTimesTest20Ran % 3);
 	int numbers[numNumbers];
 	for(int i = 0; i < numNumbers; ++i)
 	{
