@@ -268,7 +268,8 @@ void am_add_num_elements(int elementSize, int* numElements, void** elements, int
 void am_add_elements(int elementSize, int* numElements, void** elements, int newNumElements, void* newElements)
 {
 	am_add_num_elements(elementSize, numElements, elements, newNumElements);
-	memcpy(*elements, newElements, elementSize * newNumElements);}
+	memcpy(*elements, newElements, elementSize * newNumElements);
+}
 
 void am_append_num_elements(int elementSize, int* numElements, void** elements, int numElementsToAppend)
 {
