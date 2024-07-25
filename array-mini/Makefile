@@ -32,3 +32,7 @@ clean:
 	$(call RM,array_mini.o)
 	$(call RM,libarray-mini.a)
 	$(call RM,libarray-mini.lib)
+	
+	$(call RM,test.o)
+	$(call RM,test)
+	$(call RM,test.exe)
