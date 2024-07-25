@@ -1,6 +1,8 @@
 #ifndef ARRAY_MINI_H
 #define ARRAY_MINI_H
 
+#define ARRAY_MINI_VERSION 0.1
+
 
 //********************************* predicates ********************************
 
