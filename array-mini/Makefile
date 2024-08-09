@@ -24,7 +24,7 @@ test$(EXECUTABLE_EXTENSION): test.o libarray-mini$(LIBRARY_EXTENSION) ../test-mi
 	gcc -Wl,--wrap=malloc,--wrap=free,--wrap=main -o test$(EXECUTABLE_EXTENSION) test.o -L./ -larray-mini -L../test-mini/ $(addprefix -l,$(l))
 
 test.o: test.c array_mini.h ../test-mini/test_mini.h
-	gcc -c test.c -I../test-mini/
+	gcc -c test.c -I./ -I../test-mini/
 
 #******************************************************************************
 

@@ -1,5 +1,4 @@
-#define AM_SAFETY
-#include "array_mini.h"
+#include <array_mini.h>
 
 #include <test_mini.h>
 
